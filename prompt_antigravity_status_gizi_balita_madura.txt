@@ -1,0 +1,463 @@
+================================================================================
+PROMPT GOOGLE ANTIGRAVITY - SMART NUTRITION STATUS CLASSIFICATION SYSTEM FOR MADURA
+================================================================================
+CARA PAKAI:
+1. Buat folder proyek kosong, mis. "status-gizi-balita-madura".
+2. Letakkan file data_status_gizi_balita.xlsx di folder itu (root).
+3. Buka folder itu di Antigravity (File > Open Folder), pilih mode Agent/Planning.
+4. Salin SEMUA teks di bawah garis "MULAI PROMPT" sampai "SELESAI PROMPT", tempel ke agent.
+================================================================================
+================================ MULAI PROMPT ==================================
+================================================================================
+
+PERAN
+Kamu adalah senior full-stack data engineer dan UI/UX developer (Python, Streamlit,
+scikit-learn). Kerjakan SEKALI JALAN sampai selesai tanpa bertanya balik. Jika ada
+keputusan kecil yang belum saya tentukan, ambil pilihan terbaik yang paling profesional
+lalu catat di README.md. Jangan berhenti sebelum semua langkah (termasuk LANGKAH 9:
+pemeriksaan menyeluruh) selesai dan lulus.
+
+--------------------------------------------------------------------------------
+1. RINGKASAN PROYEK
+--------------------------------------------------------------------------------
+Bangun web app Streamlit profesional bernama:
+
+  JUDUL   : Smart Nutrition Status Classification System for Madura
+  SUBJUDUL: Sistem Pendukung Keputusan Skrining Status Gizi Balita di Madura Berbasis K-Nearest Neighbors (KNN)
+  PEMBUAT : ABD ROHMAN - 20251230035
+  INSTANSI: Sistem Informasi, Fakultas Teknik, Universitas Islam Madura 2026
+
+Metode WAJIB: K-Nearest Neighbors (scikit-learn KNeighborsClassifier). Jangan ganti metode.
+Bahasa antarmuka: Bahasa Indonesia.
+
+Identitas pembuat (nama, NIM, prodi, fakultas, universitas, tahun) HARUS tampil di:
+  a. banner/header semua halaman (chip kecil di bawah judul),
+  b. bagian bawah sidebar,
+  c. footer semua halaman: "© 2026 ABD ROHMAN - 20251230035 | Sistem Informasi, Fakultas Teknik, Universitas Islam Madura",
+  d. halaman "Tentang & Panduan",
+  e. README.md,
+  f. page_title browser: "Smart Nutrition Status Classification System for Madura | ABD ROHMAN".
+
+Referensi gaya: aplikasi KNN dashboard (banner, sidebar panel input dengan tombol skenario cepat +
+slider, navigasi tab horizontal, tab "Bedah Perhitungan Manual", "Evaluasi & Optimasi K",
+"Manajemen Dataset", tooltip bantuan "?"). Terapkan KONSEP serupa, tetapi seluruh desain,
+ilustrasi, teks, dan kode HARUS orisinal buatanmu sendiri (jangan menyalin).
+
+CATATAN ETIKA (WAJIB TAMPIL): sistem ini alat bantu SKRINING AWAL berbasis data simulasi,
+BUKAN alat diagnosis medis. Tampilkan disclaimer jelas di Dashboard, hasil prediksi, dan halaman
+Tentang: "Hasil bersifat perkiraan untuk skrining awal. Konfirmasi pengukuran dan penanganan
+dilakukan oleh tenaga kesehatan (posyandu/puskesmas)."
+
+--------------------------------------------------------------------------------
+2. DATA (WAJIB DIPAKAI APA ADANYA)
+--------------------------------------------------------------------------------
+File : data_status_gizi_balita.xlsx (di root proyek), sheet pertama "data gizi balita".
+Sheet kedua "Keterangan" hanya penjelasan, abaikan saat training.
+Kolom (urutan tetap), 2.300 baris, tanpa duplikat/kosong:
+  kabupaten                 : Bangkalan | Sampang | Pamekasan | Sumenep      (kategorikal)
+  jenis_kelamin             : Laki-laki | Perempuan                          (kategorikal)
+  umur_bulan                : 6-59                                           (numerik)
+  berat_badan_kg            : ~3.5-24                                        (numerik)
+  tinggi_badan_cm           : ~57-120 (panjang/tinggi badan)                 (numerik)
+  zscore_tb_u               : z-score tinggi badan menurut umur              (numerik)
+  zscore_bb_u               : z-score berat badan menurut umur               (numerik)
+  asi_eksklusif             : Ya | Tidak                                     (kategorikal)
+  sanitasi_layak            : Ya | Tidak                                     (kategorikal)
+  pendapatan_keluarga_juta  : juta rupiah/bulan, 0.5-9                       (numerik)
+  lama_sekolah_ibu          : 6 | 9 | 12 | 16 (SD/SMP/SMA/PT)                (numerik)
+  episode_infeksi_3bln      : 0-3 (diare/ISPA 3 bulan terakhir)              (numerik)
+  status_gizi               : TARGET. Normal | Stunting | Gizi Kurang
+Komposisi kelas: Normal 900, Stunting 850, Gizi Kurang 550.
+Definisi label pada data: Stunting = z TB/U < -2; Gizi Kurang = z BB/U < -2 dengan TB/U tidak
+pendek; selain itu Normal. (Definisi sederhana untuk keperluan SPK; bukan klasifikasi lengkap
+Permenkes.) Rujukan umum untuk teks: WHO Child Growth Standards 2006 dan Permenkes No. 2 Tahun 2020
+tentang Standar Antropometri Anak (sebut sebagai rujukan, jangan mengarang nomor halaman/tautan).
+JANGAN membuat ulang/mengganti data ini. Jika file tidak ditemukan, app menampilkan pesan ramah
++ uploader, bukan crash.
+CATATAN KEJUJURAN: data SIMULASI (sintetis), bukan data anak sebenarnya, tanpa identitas.
+Tampilkan catatan ini di Manajemen Dataset dan Tentang & Panduan.
+
+TABEL ACUAN Z-SCORE (WAJIB dipakai persis, ini yang dipakai saat membangun kolom z-score di data).
+Interpolasi linear dengan numpy.interp pada titik umur (bulan) [0, 6, 12, 24, 36, 48, 60]:
+  TINGGI median Laki-laki : [49.9, 67.6, 75.7, 87.1, 96.1, 103.3, 110.0]
+  TINGGI median Perempuan : [49.1, 65.7, 74.0, 85.7, 95.1, 102.7, 109.4]
+  TINGGI SD Laki-laki     : [1.9, 2.15, 2.35, 3.05, 3.7, 4.2, 4.4]
+  TINGGI SD Perempuan     : [1.9, 2.25, 2.55, 2.85, 3.85, 4.3, 4.75]
+  BERAT median Laki-laki  : [3.3, 7.9, 9.6, 12.2, 14.3, 16.3, 18.3]
+  BERAT median Perempuan  : [3.2, 7.3, 8.9, 11.5, 13.9, 16.1, 18.2]
+  BERAT SD = median_berat x fraksi, fraksi (kedua jenis kelamin) pada titik umur yang sama:
+             [0.12, 0.12, 0.12, 0.125, 0.13, 0.135, 0.14]
+Rumus:
+  zscore_tb_u = (tinggi_badan_cm - median_tinggi(umur, jk)) / sd_tinggi(umur, jk)
+  zscore_bb_u = (berat_badan_kg - median_berat) / (median_berat x fraksi(umur))
+Ini perkiraan interpolasi dari kurva WHO, bukan tabel resmi lengkap; tulis kejujuran ini di
+Tentang & Panduan. Hasilnya harus cocok dengan kolom z-score di data (selisih maksimum <= 0.01
+karena pembulatan 2 desimal) - buktikan di check_all.py.
+Di app, pengguna cukup mengisi umur, jenis kelamin, berat, tinggi; z-score DIHITUNG OTOMATIS
+dengan rumus di atas lalu ditampilkan.
+
+--------------------------------------------------------------------------------
+3. STRUKTUR FILE YANG HARUS DIHASILKAN
+--------------------------------------------------------------------------------
+status-gizi-balita-madura/
+  app.py                               aplikasi utama (boleh dipecah ke modul bila rapi)
+  train_model.py                       melatih KNN & menyimpan file .joblib
+  check_all.py                         skrip pemeriksaan otomatis (lihat LANGKAH 9)
+  requirements.txt
+  README.md
+  PANDUAN_DEPLOY.md                    panduan GitHub + Streamlit Cloud (isi: BAGIAN 12)
+  LAPORAN_PEMERIKSAAN.md               hasil pemeriksaan (dibuat di LANGKAH 9)
+  .gitignore                           (jangan mengabaikan .xlsx dan models/*.joblib)
+  .streamlit/config.toml
+  data_status_gizi_balita.xlsx         (sudah ada, jangan ditimpa)
+  models/knn_gizi_balita_madura.joblib hasil training (HARUS benar-benar dibuat & diverifikasi)
+
+requirements.txt (rentang versi, bukan pin ketat):
+  streamlit>=1.40,<2
+  pandas>=2.1
+  numpy>=1.26
+  scikit-learn>=1.4,<2
+  joblib>=1.3
+  openpyxl>=3.1
+  plotly>=5.22
+
+.streamlit/config.toml:
+  [server] headless = true
+  [browser] gatherUsageStats = false
+  [theme] base = "light"   (tema sebenarnya dikendalikan CSS kustom)
+Kode harus kompatibel Python 3.10-3.12. Cek versi Streamlit terpasang; bila ada API yang
+deprecated (mis. use_container_width vs width="stretch"), buat helper agar berjalan di kedua
+versi tanpa warning/error.
+
+--------------------------------------------------------------------------------
+4. MODEL KNN, SELEKSI FITUR & FILE .joblib
+--------------------------------------------------------------------------------
+TEMUAN PENTING dari uji awal data ini (jadikan acuan; buktikan ulang sendiri):
+  - Memakai SEMUA kolom (termasuk one-hot kategorikal) membuat akurasi KNN hanya ~70% karena
+    fitur kurang relevan mengganggu jarak.
+  - Memakai fitur z-score saja (zscore_tb_u, zscore_bb_u) memberi akurasi ~90% (K ~9).
+  - Fitur numerik terpilih memberi ~87%.
+Karena itu pipeline WAJIB mendukung SET FITUR yang dapat dipilih dan dipilih otomatis lewat CV:
+  SET A "Z-score inti"      : zscore_tb_u, zscore_bb_u
+  SET B "Numerik lengkap"   : umur_bulan, berat_badan_kg, tinggi_badan_cm, zscore_tb_u, zscore_bb_u,
+                              pendapatan_keluarga_juta, lama_sekolah_ibu, episode_infeksi_3bln
+  SET C "Semua fitur"       : SET B + one-hot (kabupaten, jenis_kelamin, asi_eksklusif, sanitasi_layak)
+train_model.py (bisa dijalankan mandiri: python train_model.py, dan diimpor app.py):
+  - Baca xlsx, validasi kolom/tipe, buang baris kosong/duplikat.
+  - Pipeline: ColumnTransformer(numerik -> StandardScaler, kategorikal -> OneHotEncoder(
+    handle_unknown="ignore", sparse_output=False)) -> KNeighborsClassifier. Untuk SET A/B tanpa
+    kategorikal, gunakan hanya bagian numerik.
+  - Split stratified 80/20, random_state=42.
+  - Grid dengan 5-fold StratifiedKFold CV: set fitur {A,B,C} x K = 1..25 x metrik {euclidean, manhattan}
+    x weights {uniform, distance}. Pilih kombinasi akurasi CV tertinggi (seri -> K lebih kecil,
+    set fitur lebih sederhana). Bandingkan juga macro-F1.
+  - Latih ulang pada data latih, hitung akurasi/precision/recall/F1 (data uji), simpan:
+      models/knn_gizi_balita_madura.joblib berisi dict:
+        {"pipeline": <Pipeline>, "feature_set": "A|B|C", "features": [...],
+         "k": int, "metric": str, "weights": str, "classes": list,
+         "metrics": {...}, "n_train": int, "n_test": int, "trained_at": ISO-datetime,
+         "sklearn_version": str, "data_file": str}
+  - Cetak ringkasan hasil di terminal. Target: akurasi uji terbaik >= 0.85.
+app.py:
+  - Muat joblib dengan st.cache_resource. Jika file belum ada ATAU gagal dimuat (mis. beda versi
+    scikit-learn di server), otomatis latih ulang & simpan lalu lanjut tanpa crash
+    (notifikasi kecil "Model dilatih ulang otomatis").
+  - Tombol "Latih Ulang & Simpan Model (.joblib)" dan "Unduh model .joblib" (st.download_button)
+    di halaman Evaluasi & Optimasi K. Setelah latih ulang: kosongkan cache dan rerun.
+  - Info model aktif: set fitur, K, metrik, weights, akurasi, tanggal latih, versi sklearn.
+  - Saat prediksi, bentuk baris input lengkap (termasuk z-score hasil hitung), lalu ambil kolom
+    sesuai "features" model aktif. Faktor risiko yang tidak dipakai model (mis. ASI, sanitasi pada
+    SET A) tetap ditampilkan sebagai panel "Faktor Risiko Tambahan" (informatif, bukan input KNN),
+    dengan keterangan jujur bahwa tidak memengaruhi hasil KNN pada set fitur aktif.
+
+--------------------------------------------------------------------------------
+5. NAVIGASI, LAYOUT, FITUR PER HALAMAN
+--------------------------------------------------------------------------------
+JANGAN memakai st.tabs (tidak memicu rerun sehingga loading tidak bisa muncul).
+Gunakan navigasi horizontal st.radio(horizontal=True) / st.segmented_control yang di-style menjadi
+"pill" glassmorphism, di bawah banner. Di mobile, navigasi bisa digeser horizontal
+(overflow-x: auto). Setiap pergantian halaman, pergantian mode siang/malam, dan aksi berat
+(latih model, evaluasi, unggah data) WAJIB menampilkan LOADING (bagian 8).
+
+Halaman (urutan tetap):
+  1. "🧒 Dashboard & Skrining Gizi"
+  2. "📊 Visualisasi 3D & 2D"
+  3. "🧮 Bedah Perhitungan Manual"
+  4. "📈 Evaluasi & Optimasi K"
+  5. "📁 Manajemen Dataset"
+  6. "🥗 Edukasi Gizi & Kurva Pertumbuhan"   (PENGGANTI tab IoT; tidak ada fitur IoT sama sekali)
+  7. "ℹ️ Tentang & Panduan"
+
+HEADER/BANNER (semua halaman): kartu kaca besar berisi judul, subjudul, chip identitas pembuat,
+ilustrasi orisinal (bola-bola kaca 3D melayang + ikon anak/hati dari SVG inline, animasi
+mengambang halus), dan JAM DIGITAL (bagian 9).
+
+SIDEBAR "🧸 Panel Data Balita":
+  - Skenario cepat (tombol, pakai on_click callback agar tidak memicu StreamlitAPIException saat
+    mengubah session_state widget). Nilai pasti (jk, umur, BB, TB, kabupaten, ASI, sanitasi,
+    pendapatan, lama sekolah ibu, infeksi):
+      👶 Balita Normal       : Laki-laki, 24 bln, BB 12.2, TB 87.0, Sumenep,   Ya, Ya,    2.5, 12, 0
+      📏 Berisiko Stunting   : Perempuan, 30 bln, BB 11.0, TB 82.0, Sampang,   Tidak, Tidak, 1.2, 6, 2
+      ⚖️ Gizi Kurang         : Laki-laki, 36 bln, BB 10.3, TB 95.5, Pamekasan, Ya, Ya,    1.8, 9, 1
+      🌧️ Stunting Usia Dini  : Perempuan, 18 bln, BB 8.4,  TB 74.0, Bangkalan, Tidak, Tidak, 1.0, 6, 3
+      🎲 Acak (dalam rentang data)   dan   ↺ Reset
+    (Hasil uji awal dengan fitur z-score, K~9: skenario 1 = Normal, 2 = Stunting, 3 = Gizi Kurang,
+     4 = Stunting. Jangan di-hardcode; hasil harus dihitung model.)
+  - Input: selectbox jenis kelamin & kabupaten; slider umur (6-59 bulan), berat (3.0-25.0 kg, step 0.1),
+    tinggi (55-125 cm, step 0.1); radio ASI eksklusif & sanitasi layak; slider pendapatan
+    (0.5-9.0 juta, step 0.1); selectbox lama sekolah ibu (6 SD / 9 SMP / 12 SMA / 16 PT);
+    slider episode infeksi (0-3). Semua dengan tooltip (help=) berisi arti & satuan.
+  - Di bawah input: tampilkan z-score TB/U & BB/U hasil hitung otomatis secara langsung.
+  - Blok "🎨 Tampilan": switch Mode Siang/Malam (st.toggle). Tema tunggal "Cerah Adem" (bagian 7).
+  - Di bawah sidebar: identitas pembuat.
+
+HALAMAN 1 - Dashboard & Skrining Gizi:
+  - Kartu hasil besar: status gizi (Normal / Stunting / Gizi Kurang) dengan ikon & warna lembut
+    (Normal hijau-mint, Gizi Kurang kuning-peach, Stunting oranye-koral; jangan merah menyala),
+    tingkat keyakinan (%) dari predict_proba.
+  - Peringkat probabilitas 3 kelas (bar kaca), komposisi K tetangga terdekat (mis. 7 dari 9 = Stunting).
+  - Panel indikator: z-score TB/U & BB/U dengan "pengukur" horizontal berskala -4..+3 SD dan
+    zona (< -3, -3..-2, -2..+2, > +2) berwarna lembut.
+  - Panel "Faktor Risiko Tambahan" (ASI, sanitasi, pendapatan, pendidikan ibu, infeksi, kabupaten)
+    sebagai lencana "Perlu perhatian"/"Baik" + saran singkat (informatif).
+  - Rekomendasi tindak lanjut sesuai hasil (umum & hati-hati: pantau rutin di posyandu, konsultasi ke
+    puskesmas/tenaga gizi, perbaiki pola makan & sanitasi). JANGAN memberi dosis obat/suplemen.
+  - Peringatan bila keyakinan < 60%, atau umur/ukuran di luar rentang data latih, atau nilai tidak
+    wajar (mis. z-score ekstrem) -> sarankan ukur ulang.
+  - Riwayat skrining (maks 50, session_state): tabel + Unduh CSV + Hapus riwayat.
+  - Disclaimer etika (bagian 1).
+HALAMAN 2 - Visualisasi 3D & 2D (Plotly, transparan mengikuti tema):
+  - Scatter 3D: pilih 3 fitur numerik sebagai sumbu; warna per status gizi; titik input pengguna
+    ditandai khusus (berlian besar); opsional garis ke K tetangga.
+  - Scatter 2D z-score TB/U vs BB/U dengan garis batas -2 SD, plus titik pengguna.
+  - Histogram/box per fitur per status, heatmap korelasi, bar distribusi kelas,
+    bar status per kabupaten, per jenis kelamin, per ASI eksklusif, per sanitasi.
+  - Radar: profil input pengguna vs rata-rata tiap status (dinormalisasi 0-1).
+  - Filter: kabupaten, jenis kelamin, rentang umur.
+HALAMAN 3 - Bedah Perhitungan Manual (transparan, bisa diverifikasi):
+  Langkah 1: input mentah (umur, jk, BB, TB) dan perhitungan z-score dengan rumus st.latex
+             disertai angka nyata dari tabel acuan (median, SD hasil interpolasi).
+  Langkah 2: normalisasi fitur model aktif - tabel μ, σ dari scaler, z = (x − μ)/σ dengan angka nyata
+             (dan one-hot bila SET C).
+  Langkah 3: jarak ke SEMUA data latih dengan numpy (euclidean d = sqrt(Σ (a_i − b_i)²) atau
+             manhattan sesuai model), tabel K tetangga terdekat: peringkat, status, jarak,
+             kontribusi selisih per fitur.
+  Langkah 4: pemungutan suara - uniform (hitung) atau distance (bobot 1/d); tabel suara per kelas.
+  Langkah 5: hasil akhir + PEMBUKTIAN: bandingkan indeks & jarak manual dengan
+             pipeline.named_steps["knn"].kneighbors; tampilkan "✅ Cocok" bila identik.
+HALAMAN 4 - Evaluasi & Optimasi K:
+  - Parameter: rasio data uji (10-40%), set fitur (A/B/C), rentang K (1-30), metrik, weights, fold CV (3-10).
+  - Tombol "Jalankan Evaluasi" (dengan loading): grafik K vs akurasi (latih & CV), K terbaik, akurasi,
+    precision/recall/F1 (macro), classification report (tabel), confusion matrix (heatmap),
+    tabel perbandingan set fitur A/B/C (ini menunjukkan mengapa seleksi fitur penting),
+    tabel grid search berperingkat.
+  - Tombol "Terapkan konfigurasi terbaik & simpan model" -> tulis ulang .joblib & muat ulang model aktif.
+  - Tombol "Unduh model .joblib". Info model aktif.
+HALAMAN 5 - Manajemen Dataset:
+  - Ringkasan: jumlah baris/kolom, cek kosong, duplikat, rentang fitur, distribusi kelas.
+  - Tabel data dengan pencarian, filter (kabupaten/jk/status), urutan kolom, paginasi (50 baris/halaman).
+  - Tambah satu data lewat form (validasi rentang & kategori; z-score dihitung otomatis dari rumus acuan;
+    label status dihitung otomatis dengan definisi pada BAGIAN 2 BUKAN diisi manual) lalu simpan ke xlsx
+    (tulis ulang sheet "data gizi balita" tanpa merusak sheet "Keterangan"), opsi latih ulang.
+  - Unggah xlsx/csv pengganti dengan validasi skema ketat (kolom, tipe, kategori, rentang);
+    bila tidak valid tampilkan daftar kesalahan, JANGAN menimpa data lama.
+  - Unduh data (xlsx & csv). Tombol "Kembalikan data asli" bila ada cadangan.
+  - Catatan: di Streamlit Cloud perubahan file tidak permanen setelah reboot; jelaskan.
+  - Catatan: data simulasi, tanpa identitas anak.
+HALAMAN 6 - Edukasi Gizi & Kurva Pertumbuhan (pengganti tab IoT):
+  - Kurva pertumbuhan interaktif (Plotly): TB/U dan BB/U untuk jenis kelamin terpilih, dengan garis
+    median dan ±1, ±2, ±3 SD dari tabel acuan (area zona berwarna lembut), serta titik balita pada
+    input sidebar (dan opsi menampilkan sebaran data latih).
+  - Edukasi informatif (ringkas, akurat, bernada hati-hati, sesuai panduan umum Kemenkes/WHO):
+    apa itu stunting dan gizi kurang, penyebab (gizi, infeksi, sanitasi, pola asuh), 1000 Hari Pertama
+    Kehidupan, ASI eksklusif 6 bulan, MP-ASI bergizi dengan protein hewani, pemantauan tumbuh
+    kembang rutin di posyandu, imunisasi, air bersih & sanitasi, kapan harus ke puskesmas.
+    Sajikan sebagai kartu kaca dan accordion (st.expander).
+  - Konteks Madura: tuliskan umum (gizi seimbang dari pangan lokal seperti ikan laut, jagung,
+    kacang-kacangan, sayur) TANPA menyebut angka prevalensi/statistik yang tidak bisa kamu pastikan.
+  - Perbandingan sebaran status gizi per kabupaten dari DATA (bar), dengan label jelas "data simulasi".
+  - Daftar rujukan umum (WHO Child Growth Standards 2006; Permenkes No. 2 Tahun 2020; Kemenkes RI)
+    sebagai teks tanpa tautan yang tidak pasti.
+HALAMAN 7 - Tentang & Panduan:
+  - Profil pembuat (ABD ROHMAN - 20251230035, Sistem Informasi, Fakultas Teknik,
+    Universitas Islam Madura 2026), tujuan sistem, alur KNN, rumus jarak, normalisasi & seleksi fitur,
+    cara membaca hasil, keterbatasan (data simulasi, kurva WHO hasil interpolasi, definisi label
+    sederhana, bukan alat diagnosis), panduan penggunaan langkah demi langkah, glosarium, FAQ,
+    versi app & library terpasang.
+
+--------------------------------------------------------------------------------
+6. GAYA VISUAL: GLASSMORPHISM LEMBUT + TIGA DIMENSI
+--------------------------------------------------------------------------------
+  - Latar halaman: gradien mesh lembut (aqua, mint, biru langit, lavender pucat) dengan 3-4
+    "blob" blur besar yang bergerak pelan (CSS keyframes, aktifkan prefers-reduced-motion untuk mematikan).
+  - Kartu kaca: background rgba(255,255,255,0.35) (mode siang) / rgba(255,255,255,0.08) (malam),
+    backdrop-filter: blur(18px) saturate(140%), border 1px rgba(255,255,255,0.55),
+    border-radius 22-28px, bayangan lembut berlapis (mis. 0 10px 30px rgba(31,80,120,.12),
+    0 2px 6px rgba(...)), highlight tipis gradien di tepi atas-kiri untuk kesan kaca.
+    Sediakan fallback bila backdrop-filter tidak didukung (latar lebih pekat).
+  - Kesan 3D: lapisan kedalaman (multi-layer shadow), elemen melayang, bola kaca 3D dengan radial-gradient,
+    transform perspective + rotateX/rotateY kecil saat hover pada kartu hasil & kartu informasi,
+    transisi 250ms.
+  - Tombol: kaca timbul, hover naik (translateY(-2px)) + cahaya halus; active menekan; fokus keyboard
+    terlihat jelas. Pill navigasi aktif = kaca lebih pekat + garis aksen.
+  - Input (selectbox, slider, number input): kaca dengan border halus; dropdown/popover Streamlit
+    (div[data-baseweb="popover"], ul[role="listbox"]), expander, tooltip, toast, alert harus ikut tema
+    (jangan ada kotak putih/hitam bawaan yang bocor).
+  - Warna lembut/pastel, kontras teks tetap memenuhi WCAG AA (4.5:1) - karena latar kaca
+    tembus pandang, pastikan teks selalu terbaca di atas semua area latar.
+  - Font: Google Fonts "Poppins" (judul) & "Inter" (isi) via @import; fallback sans-serif.
+  - Sembunyikan footer "Made with Streamlit" dan latar header putih bawaan (transparan).
+  - Tabel: JANGAN pakai st.dataframe/st.data_editor untuk tampilan utama (canvas tidak bisa
+    mengikuti CSS tema). Buat helper render_table(df, page_size=50): tabel HTML ber-CSS kaca,
+    header sticky, zebra halus, scroll horizontal di mobile, dengan paginasi.
+  - Plotly: paper_bgcolor/plot_bgcolor transparan, font & grid dari variabel tema. Warna kelas tetap:
+      Normal #4FB89A (mint), Gizi Kurang #F2B84B (kuning-madu), Stunting #EE8A6E (koral)
+    (cukup kontras di mode siang & malam).
+
+--------------------------------------------------------------------------------
+7. TEMA "CERAH ADEM" + SWITCH SIANG/MALAM
+--------------------------------------------------------------------------------
+Satu tema utama bernama "Cerah Adem" dengan dua mode (st.toggle "☀️ Siang / 🌙 Malam"), tersimpan
+di st.session_state dan st.query_params (?mode=siang|malam) agar bertahan saat refresh.
+Default = siang.
+  MODE SIANG (cerah adem):
+    --bg-from #E6F6F4 (mint pucat)  --bg-via #DCEEFB (biru langit pucat)  --bg-to #EFE9FB (lavender pucat)
+    --glass rgba(255,255,255,0.38)  --glass-border rgba(255,255,255,0.65)
+    --text #1F3B4D (biru laut tua)  --muted #5B7A8C
+    --primary #3FA7A0 (teal lembut)  --accent #6AA6E8 (biru langit)  --accent2 #A99BE6 (lavender)
+    --success #4FB89A  --warning #F2B84B  --danger #EE8A6E
+  MODE MALAM (tetap adem):
+    --bg-from #0F2430  --bg-via #12303F  --bg-to #1B2447
+    --glass rgba(255,255,255,0.08)  --glass-border rgba(255,255,255,0.18)
+    --text #E4F1F5  --muted #9DB8C4
+    --primary #5CCBC2  --accent #86B9F2  --accent2 #B9AEF0
+    --success #62CDAE  --warning #F5C76A  --danger #F29A82
+Terapkan seluruh warna lewat CSS variables. Pastikan perubahan mode mengubah SELURUH UI termasuk
+grafik, tabel, jam, ilustrasi, dan elemen portal Streamlit. Sediakan fungsi cek kontras dan uji
+semua pasangan teks/latar utama (>= 4.5:1) pada kedua mode.
+
+--------------------------------------------------------------------------------
+8. LOADING SAAT PERGANTIAN MENU / TAB / MODE / AKSI BERAT
+--------------------------------------------------------------------------------
+Helper show_loading(label): overlay penuh-layar kaca semi-transparan dengan spinner/animasi bola
+kaca berputar + teks "Memuat <nama halaman>..." (placeholder st.empty(), tampil minimal ~0.5 detik lalu
+dikosongkan). Panggil saat: halaman berubah (bandingkan dengan st.session_state["last_page"]),
+mode siang/malam berubah, dan aksi berat (latih model, evaluasi/grid search, unggah/validasi/simpan data).
+Tambahkan st.spinner pada komputasi lama. Overlay tidak boleh membuat tombol macet atau layar
+terkunci (selalu dikosongkan, pakai try/finally, termasuk saat error).
+
+--------------------------------------------------------------------------------
+9. JAM & TANGGAL BERJALAN (REAL-TIME)
+--------------------------------------------------------------------------------
+Tampilkan di header: hari, tanggal, bulan, tahun, jam:menit:detik yang BERDETAK tiap detik tanpa
+me-rerun Streamlit. Gunakan st.components.v1.html berisi JavaScript (setInterval 1000 ms), zona waktu
+Asia/Jakarta (toLocaleString "id-ID" dengan timeZone:"Asia/Jakarta"), format
+"Selasa, 17 November 2026 • 05:54:13 WIB". Warna/font mengikuti variabel tema aktif (sisipkan nilai
+warna ke HTML saat render). Ringkas di mobile.
+
+--------------------------------------------------------------------------------
+10. RESPONSIF (DESKTOP, TABLET, MOBILE)
+--------------------------------------------------------------------------------
+CSS media query (breakpoint 1024 / 768 / 480):
+  - <=768px: padding konten kecil, banner jadi 1 kolom (ilustrasi mengecil/pindah atas), kolom
+    st.columns menumpuk vertikal, font judul memakai clamp(), tombol minimal 44px, navigasi pill
+    bisa digeser, tabel scroll horizontal, tinggi grafik Plotly 320-380px dengan legend di bawah,
+    blur dikurangi (performa) bila perlu, sidebar default tertutup (initial_sidebar_state="auto")
+    namun bisa dibuka.
+  - Tidak boleh ada scroll horizontal halaman (kecuali di dalam tabel/navigasi).
+  - Uji pada lebar 375, 414, 768, 1024, 1440 px.
+
+--------------------------------------------------------------------------------
+11. KUALITAS KODE
+--------------------------------------------------------------------------------
+  - Kode bersih, modular, docstring/komentar bahasa Indonesia secukupnya, type hints.
+  - st.cache_data untuk data, st.cache_resource untuk model; kosongkan cache setelah data/model berubah.
+  - Semua widget punya key unik; state terkelola rapi (default diinisialisasi sekali).
+  - Penanganan error ramah (try/except), tanpa traceback mentah ke pengguna.
+  - Pathlib relatif terhadap app.py; tanpa path absolut. Tanpa API key/rahasia; tanpa dependensi
+    di luar requirements.txt.
+  - Aksesibilitas: label jelas, kontras baik, fokus keyboard terlihat, aria pada SVG/ilustrasi.
+  - Performa: hitung jarak manual vektorisasi numpy.
+  - Privasi: tidak menyimpan/mengirim data balita ke luar; riwayat hanya di session_state.
+
+--------------------------------------------------------------------------------
+LANGKAH 9 (WAJIB) - PEMERIKSAAN MENYELURUH SETELAH SEMUA SELESAI
+--------------------------------------------------------------------------------
+Setelah kode selesai, JANGAN langsung menyatakan selesai. Jalankan dan buktikan:
+  A. Jalankan "python train_model.py" -> pastikan models/knn_gizi_balita_madura.joblib terbentuk,
+     muat ulang dengan joblib.load, lakukan 1 prediksi uji.
+  B. Buat check_all.py yang memeriksa otomatis (cetak tabel PASS/FAIL):
+       1) data ada, 13 kolom lengkap, tanpa kosong/duplikat, 3 kelas dengan komposisi 900/850/550;
+       2) z-score yang dihitung ulang dari tabel acuan cocok dengan kolom data (selisih maks <= 0.01);
+       3) joblib terbentuk & bisa dimuat, akurasi uji >= 0.85, dan perbandingan set fitur A/B/C
+          tercatat (A atau B harus lebih baik daripada C);
+       4) kontras teks lolos 4.5:1 pada mode siang DAN malam;
+       5) streamlit.testing.v1.AppTest: jalankan app, untuk SETIAP dari 7 halaman set navigasi dan run,
+          pastikan tanpa exception; klik tiap skenario cepat, Acak, Reset, ubah slider/selectbox/radio,
+          toggle siang/malam; pastikan hasil skrining muncul dan z-score terhitung;
+       6) skenario 1-4 menghasilkan kelas yang masuk akal (1 Normal, 2 & 4 Stunting, 3 Gizi Kurang),
+          laporkan bila ada yang berbeda dan jelaskan;
+       7) hasil Bedah Perhitungan Manual cocok dengan kneighbors (indeks & jarak);
+       8) tambah data/unggah data tidak valid ditolak dengan pesan jelas, data valid diterima
+          (label & z-score otomatis benar);
+       9) latih ulang model dari app menghasilkan joblib baru tanpa error.
+  C. Jalankan app sungguhan: "streamlit run app.py --server.headless true" dan buka dengan
+     Playwright/Chromium bila tersedia: screenshot tiap halaman pada 375px dan 1440px, mode siang & malam;
+     cek tidak ada scroll horizontal, tidak ada elemen putih/hitam bawaan yang bocor, efek kaca terlihat,
+     jam berdetak, loading muncul saat pindah halaman, tidak ada error di console/terminal. Bila
+     Playwright tidak tersedia, tinjau kode CSS/HTML dan jelaskan keterbatasannya di laporan.
+  D. Perbaiki SEMUA masalah, ulangi A-C sampai seluruh pemeriksaan PASS.
+  E. Tulis LAPORAN_PEMERIKSAAN.md: daftar pemeriksaan, hasil (✅/❌), bug yang ditemukan &
+     diperbaiki, versi library, batasan tersisa (jujur; jangan mengklaim sesuatu yang tidak benar-benar dijalankan).
+
+--------------------------------------------------------------------------------
+12. ISI PANDUAN_DEPLOY.md (tulis lengkap, bahasa Indonesia, langkah bernomor)
+--------------------------------------------------------------------------------
+A. Menghubungkan ke GitHub (akun: abdrohmanuim@gmail.com)
+   1. Masuk/daftar di https://github.com dengan email abdrohmanuim@gmail.com
+      (pastikan email terverifikasi di Settings > Emails).
+   2. Pasang Git (https://git-scm.com) lalu atur identitas:
+        git config --global user.name "Abd Rohman"
+        git config --global user.email "abdrohmanuim@gmail.com"
+      Email ini harus sama dengan email di akun GitHub agar commit tercatat sebagai kontribusi Anda.
+   3. Buat repository baru di GitHub: nama "status-gizi-balita-madura", Public, JANGAN centang
+      "Add README/.gitignore" (repo kosong).
+   4. Di folder proyek, jalankan:
+        git init
+        git add .
+        git commit -m "Initial commit: Smart Nutrition Status Classification System for Madura"
+        git branch -M main
+        git remote add origin https://github.com/<USERNAME_GITHUB>/status-gizi-balita-madura.git
+        git push -u origin main
+      (ganti <USERNAME_GITHUB> dengan username GitHub Anda).
+   5. Autentikasi saat push: pakai jendela login GitHub yang muncul (Git Credential Manager), atau
+      Personal Access Token (GitHub > Settings > Developer settings > Personal access tokens >
+      Tokens (classic) > centang "repo") sebagai pengganti password, atau "gh auth login" bila memakai GitHub CLI.
+   6. Alternatif di Antigravity: panel Source Control > Initialize Repository > Commit >
+      "Publish Branch/Publish to GitHub" > login akun GitHub di browser.
+   7. Pastikan di GitHub terlihat: app.py, requirements.txt, data_status_gizi_balita.xlsx,
+      models/knn_gizi_balita_madura.joblib, folder .streamlit.
+   8. Update berikutnya: git add . ; git commit -m "pesan" ; git push
+B. Menghubungkan ke Streamlit Community Cloud (streamlit.app)
+   1. Buka https://share.streamlit.io, klik "Continue with GitHub", login dengan akun GitHub yang sama.
+   2. Authorize Streamlit untuk mengakses repository (boleh hanya repo status-gizi-balita-madura).
+   3. Klik "Create app" > "Deploy a public app from GitHub".
+   4. Isi: Repository = <USERNAME_GITHUB>/status-gizi-balita-madura | Branch = main | Main file path = app.py.
+   5. (Opsional) App URL: status-gizi-balita-madura -> https://status-gizi-balita-madura.streamlit.app
+   6. Advanced settings > Python 3.11 atau 3.12 > Deploy. Tunggu instalasi selesai (beberapa menit).
+   7. Setiap git push ke branch main memperbarui app otomatis. Menu "⋮" > Reboot app bila perlu.
+   8. Masalah umum: (a) ModuleNotFoundError -> periksa requirements.txt; (b) file xlsx tidak ditemukan ->
+      pastikan ter-commit dan nama persis "data_status_gizi_balita.xlsx" (huruf kecil semua);
+      (c) joblib gagal dimuat karena beda versi scikit-learn -> app melatih ulang otomatis;
+      (d) perubahan data lewat app tidak permanen setelah reboot -> ubah file lalu push ke GitHub.
+
+--------------------------------------------------------------------------------
+13. HASIL AKHIR YANG HARUS KAMU LAPORKAN KEPADA SAYA
+--------------------------------------------------------------------------------
+Setelah LANGKAH 9 lulus, tampilkan ringkasan singkat: daftar file, set fitur/K/akurasi model terpilih,
+hasil check_all.py, cara menjalankan lokal (pip install -r requirements.txt lalu streamlit run app.py),
+dan lokasi PANDUAN_DEPLOY.md. Jangan melaporkan "selesai" jika masih ada pemeriksaan yang gagal.
+
+================================================================================
+================================ SELESAI PROMPT ================================
+================================================================================
